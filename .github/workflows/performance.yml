@@ -15,7 +15,7 @@ jobs:
 
     services:
       alerta:
-        image: ghcr.io/alerta/alerta-api
+        image: ghcr.io/${{ github.repository_owner }}/alerta-api
         env:
           DEBUG: 1
           DATABASE_URL: postgres://postgres:postgres@postgres:5432/alerta
