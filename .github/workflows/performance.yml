@@ -2,7 +2,7 @@ name: Performance
 
 on:
   push:
-    branches: [ master, release/*, docker/* ]
+    branches: [ master, release/* ]
     tags: [ '**' ]
 
 env:
