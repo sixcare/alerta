@@ -24,7 +24,7 @@ Release 8 only supports Python 3.7 or higher.
 The only mandatory dependency is MongoDB or PostgreSQL. Everything else is optional.
 
 - Postgres version 10 or better
-- MongoDB version 4.0 or better (4.0.7 required for full query syntax support)
+- MongoDB version 4.2 or better
 
 Installation
 ------------
@@ -77,7 +77,7 @@ Development
 To run in development mode, listening on port 5000:
 
     $ export FLASK_APP=alerta FLASK_ENV=development
-    $ pip install -e .
+    $ pip install .[dev]
     $ flask run
 
 To run in development mode, listening on port 8080, using Postgres and
@@ -86,8 +86,11 @@ reporting errors to [Sentry](https://sentry.io):
     $ export FLASK_APP=alerta FLASK_ENV=development
     $ export DATABASE_URL=postgres://localhost:5432/alerta5
     $ export SENTRY_DSN=https://8b56098250544fb78b9578d8af2a7e13:fa9d628da9c4459c922293db72a3203f@sentry.io/153768
-    $ pip install -e .[postgres]
+    $ pip install .[dev,postgres]
     $ flask run --debugger --port 8080 --with-threads --reload
+
+To build the postgres module for python, you might need some OS dependencies:
+- Debian/Ubuntu: sudo apt-get install libpq-dev
 
 Troubleshooting
 ---------------
