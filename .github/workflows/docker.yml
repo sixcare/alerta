@@ -20,13 +20,13 @@ jobs:
         uses: actions/checkout@v2
       - name: Variables
         id: vars
-        run: echo "::set-output name=SHORT_COMMIT_ID::$(git rev-parse --short HEAD)"
+        run: echo "SHORT_COMMIT_ID=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: Build image
         id: docker-build
         run: >-
           docker build
           -t $IMAGE_NAME
-          -t $REPOSITORY_URL/$IMAGE_NAME:$(cat VERSION)
+          -t $REPOSITORY_URL/$IMAGE_NAME:$(grep '__version__' alerta/__init__.py | cut -d"'" -f2)
           -t $REPOSITORY_URL/$IMAGE_NAME:${{ steps.vars.outputs.SHORT_COMMIT_ID }}
           -t $REPOSITORY_URL/$IMAGE_NAME:latest .
       - name: Docker Login

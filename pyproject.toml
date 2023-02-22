@@ -14,7 +14,8 @@ authors = [
 ]
 maintainers = [
     { name = "Are Schjetne", email = "sixcare.as@gmail.com" },
-    { name = "Terje Nomeland", email = "tjnome@gmail.com" }
+    { name = "Terje Nomeland", email = "tjnome@gmail.com" },
+    { name = "Sigurd Våg Aaknes", email = "sigurdvaa@gmail.com" }
 ]
 keywords = [
     "alert",
@@ -114,7 +115,14 @@ Homepage = "https://github.com/alerta/alerta"
 [tool.hatch.version]
 path = "alerta/__init__.py"
 
-[tool.hatch.build.targets.sdist]
+[tool.hatch.build]
 include = [
-    "/alerta",
+  "alerta/**/",
+  "LICENSE",
+  "NOTICE",
+  "README.md",
+  "wsgi.py"
+]
+exclude = [
+  "tests/**",
 ]
