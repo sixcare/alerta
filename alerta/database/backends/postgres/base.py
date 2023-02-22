@@ -76,8 +76,7 @@ class Backend(Database):
             raise RuntimeError(f'Database connect error. Failed to connect after {MAX_RETRIES} retries.')
 
     def close(self, db):
-        # Don't need to close when using context manager
-        pass
+        db.close()
 
     @property
     def name(self):
