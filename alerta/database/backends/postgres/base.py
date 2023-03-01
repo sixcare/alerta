@@ -4,12 +4,16 @@ from collections import defaultdict, namedtuple
 from datetime import datetime
 
 from flask import current_app
+from psycopg.adapt import Dumper
 from psycopg.rows import namedtuple_row
+from psycopg.types.composite import CompositeInfo, register_composite
+from psycopg.types.json import Json
 from psycopg_pool import ConnectionPool
 
 from alerta.app import alarm_model
 from alerta.database.base import Database
 from alerta.exceptions import NoCustomerMatch
+from alerta.models.alert import History
 from alerta.models.enums import ADMIN_SCOPES
 from alerta.models.heartbeat import HeartbeatStatus
 from alerta.utils.format import DateTime
@@ -24,6 +28,38 @@ Record = namedtuple('Record', [
     'group', 'value', 'text', 'tags', 'attributes', 'origin', 'update_time',
     'user', 'timeout', 'type', 'customer'
 ])
+
+
+class HistoryDumper(Dumper):
+    def dump(self, elem):
+        def quoted(o):
+            a = adapt(o)
+            if hasattr(a, 'prepare'):
+                a.prepare(self.conn)
+            return a.getquoted().decode('utf-8')
+
+        return '({}, {}, {}, {}, {}, {}, {}, {}::timestamp, {}, {})::history'.format(
+            quoted(self.history.id),
+            quoted(self.history.event),
+            quoted(self.history.severity),
+            quoted(self.history.status),
+            quoted(self.history.value),
+            quoted(self.history.text),
+            quoted(self.history.change_type),
+            quoted(self.history.update_time),
+            quoted(self.history.user),
+            quoted(self.history.timeout)
+        )
+
+
+class DatetimeDumper(Dumper):
+    def dump(self, elem):
+        return str(DateTime.iso8601(elem)).encode('utf-8')
+
+
+class JsonDumper(Dumper):
+    def dump(self, elem):
+        return Json(elem)
 
 
 class Backend(Database):
@@ -53,7 +89,10 @@ class Backend(Database):
                     kwargs={
                         'dbname': self.dbname,
                         'client_encoding': 'UTF8',
-                        'row_factory': namedtuple_row})
+                        'row_factory': namedtuple_row
+                    },
+                    configure=self.configure_adapters
+                )
 
                 # Test that we are able to connect to database
                 with pool.connection(timeout=1.0):
@@ -74,6 +113,14 @@ class Backend(Database):
             return pool
         else:
             raise RuntimeError(f'Database connect error. Failed to connect after {MAX_RETRIES} retries.')
+
+    @staticmethod
+    def configure_adapters(conn):
+        conn.adapters.register_dumper(dict, JsonDumper)
+        conn.adapters.register_dumper(datetime, DatetimeDumper)
+        
+        conn.adapters.register_dumper(History, HistoryDumper)
+        register_composite(CompositeInfo.fetch(conn, 'history'))
 
     def close(self, db):
         db.close()

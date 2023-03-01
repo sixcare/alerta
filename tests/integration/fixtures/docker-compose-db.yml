@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   alerta-mongo:
-    image: mongo
+    image: docker.io/library/mongo:latest
     ports:
       - 27017:27017
     environment:
@@ -14,7 +14,7 @@ services:
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
 
   alerta-postgres:
-    image: postgres
+    image: docker.io/library/postgres:alpine
     ports:
       - 5432:5432
     environment:
