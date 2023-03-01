@@ -43,6 +43,7 @@ classifiers = [
 ]
 dependencies = [
     "blinker>=1.5",
+    "bcrypt==4.0.1",
     "cryptography>=38.0.1",
     "Flask-Compress>=1.13",
     "Flask-Cors>=3.0.2",
@@ -122,7 +123,13 @@ no-cov = "cov --no-cov {args}"
 lint = "pre-commit run -a"
 
 [tool.hatch.version]
-path = "alerta/__init__.py"
+path = "alerta/__about__.py"
+
+[tool.hatch.envs.test]
+dependencies = [
+  "requests-mock",
+  "lxml"
+]
 
 [tool.hatch.build]
 include = [
