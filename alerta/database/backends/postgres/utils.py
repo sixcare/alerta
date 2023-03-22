@@ -147,7 +147,8 @@ class Alerts(QueryBuilder):
                 parser = QueryParser()
                 query = [parser.parse(
                     query=params['q'],
-                    default_field=params.get('q.df')
+                    default_field=params.get('q.df'),
+                    valid_fields=Alerts.VALID_PARAMS,
                 )]
                 qvars = dict()  # type: Dict[str, Any]
             except ParseException as e:

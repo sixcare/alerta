@@ -29,16 +29,16 @@ class SearchModifier(UnaryOperation):
 
 class SearchAnd(BinaryOperation):
 
-    def __repr__(self):
-        return f'({self.lhs} AND {self.rhs})'
+    def __repr__(self, valid_fields=None):
+        return f'({self.lhs.__repr__(valid_fields)} AND {self.rhs.__repr__(valid_fields)})'
 
 
 class SearchOr(BinaryOperation):
 
-    def __repr__(self):
+    def __repr__(self, valid_fields=None):
         if getattr(self.rhs, 'op', None) == 'NOT':
-            return f'({self.lhs} AND {self.rhs})'
-        return f'({self.lhs} OR {self.rhs})'
+            return f'({self.lhs.__repr__(valid_fields)} AND {self.rhs.__repr__(valid_fields)})'
+        return f'({self.lhs.__repr__(valid_fields)} OR {self.rhs.__repr__(valid_fields)})'
 
 
 class SearchNot(UnaryOperation):
@@ -52,10 +52,12 @@ class SearchTerm:
     def __init__(self, tokens):
         self.tokens = tokens
 
-    def __repr__(self):
+    def __repr__(self, valid_fields=None):
         # print([t for t in self.tokens.items()])
         if 'singleterm' in self.tokens:
             if self.tokens.fieldname == '_exists_':
+                if self.tokens.singleterm not in valid_fields:
+                    raise ParseException(f"Invalid field: '{self.tokens.singleterm}'")
                 return f'"attributes"::jsonb ? \'{self.tokens.singleterm}\''
             elif self.tokens.fieldname in ['correlate', 'service', 'tags']:
                 return f'\'{self.tokens.singleterm}\'=ANY("{self.tokens.field[0]}")'
@@ -63,6 +65,8 @@ class SearchTerm:
                 tokens_attr = self.tokens.attr.replace('_', 'attributes')
                 return f'"{tokens_attr}"::jsonb ->>\'{self.tokens.fieldname}\' ILIKE \'%%{self.tokens.singleterm}%%\''
             else:
+                if self.tokens.field[0] not in valid_fields:
+                    raise ParseException(f"Invalid field: '{self.tokens.field[0]}'")
                 return f'"{self.tokens.field[0]}" ILIKE \'%%{self.tokens.singleterm}%%\''
         if 'phrase' in self.tokens:
             if self.tokens.field[0] == '__default_field__':
@@ -179,6 +183,6 @@ class QueryParser:
 
     DEFAULT_FIELD = 'text'
 
-    def parse(self, query, default_field=None):
+    def parse(self, query, default_field=None, valid_fields=None):
         default_field = default_field or QueryParser.DEFAULT_FIELD
-        return repr(query_expr.parseString(query)[0]).replace('__default_field__', default_field)
+        return query_expr.parseString(query)[0].__repr__(valid_fields).replace('__default_field__', default_field)
