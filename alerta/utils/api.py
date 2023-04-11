@@ -68,7 +68,7 @@ def process_alert(alert: Alert) -> Alert:
 
     wanted_plugins, wanted_config = plugins.routing()
 
-    updated = None
+    alert_was_updated: bool = False
     for plugin in wanted_plugins:
         if skip_plugins:
             break
@@ -85,8 +85,9 @@ def process_alert(alert: Alert) -> Alert:
                 logging.error(f"Error while running post-receive plugin '{plugin.name}': {str(e)}")
         if updated:
             alert = updated
+            alert_was_updated = True
 
-    if updated:
+    if alert_was_updated:
         alert.update_tags(alert.tags)
         alert.attributes = alert.update_attributes(alert.attributes)
 
