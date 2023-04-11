@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKINGdelete
 
 from flask import Config, Flask
 from pkg_resources import (DistributionNotFound, iter_entry_points,
@@ -49,13 +49,13 @@ class Plugins:
         except (DistributionNotFound, ImportError):
             LOG.info('No plugin routing rules found. All plugins will be evaluated.')
 
-    def routing(self, alert: 'Alert') -> 'Tuple[Iterable[PluginBase], Config]':
+    def routing(self) -> 'Tuple[Iterable[PluginBase], Config]':
         try:
             if self.plugins and self.rules:
                 try:
-                    r = self.rules(alert, self.plugins, config=self.config)
+                    r = self.rules(self.plugins, config=self.config)
                 except TypeError:
-                    r = self.rules(alert, self.plugins)
+                    r = self.rules(self.plugins)
 
                 if isinstance(r, list):
                     return r, self.config

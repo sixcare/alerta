@@ -8,6 +8,8 @@ from alerta.exceptions import (AlertaException, ApiError, BlackoutPeriod,
                                ForwardingLoop, HeartbeatReceived,
                                InvalidAction, RateLimit, RejectException)
 from alerta.models.alert import Alert
+from alerta.models.blackout import Blackout
+from alerta.models.filter import Filter
 from alerta.models.enums import Scope
 
 
@@ -30,7 +32,7 @@ def assign_customer(wanted: str = None, permission: str = Scope.admin_alerts) ->
 
 def process_alert(alert: Alert) -> Alert:
 
-    wanted_plugins, wanted_config = plugins.routing(alert)
+    wanted_plugins, wanted_config = plugins.routing()
 
     skip_plugins = False
     for plugin in wanted_plugins:
@@ -64,7 +66,7 @@ def process_alert(alert: Alert) -> Alert:
     except Exception as e:
         raise ApiError(str(e))
 
-    wanted_plugins, wanted_config = plugins.routing(alert)
+    wanted_plugins, wanted_config = plugins.routing()
 
     updated = None
     for plugin in wanted_plugins:
@@ -93,7 +95,7 @@ def process_alert(alert: Alert) -> Alert:
 
 def process_action(alert: Alert, action: str, text: str, timeout: int = None) -> Tuple[Alert, str, str, Optional[int]]:
 
-    wanted_plugins, wanted_config = plugins.routing(alert)
+    wanted_plugins, wanted_config = plugins.routing()
 
     updated = None
     for plugin in wanted_plugins:
@@ -128,7 +130,7 @@ def process_action(alert: Alert, action: str, text: str, timeout: int = None) ->
 
 def process_note(alert: Alert, text: str) -> Tuple[Alert, str]:
 
-    wanted_plugins, wanted_config = plugins.routing(alert)
+    wanted_plugins, wanted_config = plugins.routing()
 
     updated = None
     for plugin in wanted_plugins:
@@ -158,7 +160,7 @@ def process_note(alert: Alert, text: str) -> Tuple[Alert, str]:
 
 def process_status(alert: Alert, status: str, text: str) -> Tuple[Alert, str, str]:
 
-    wanted_plugins, wanted_config = plugins.routing(alert)
+    wanted_plugins, wanted_config = plugins.routing()
 
     updated = None
     for plugin in wanted_plugins:
@@ -190,7 +192,7 @@ def process_status(alert: Alert, status: str, text: str) -> Tuple[Alert, str, st
 
 def process_delete(alert: Alert) -> bool:
 
-    wanted_plugins, wanted_config = plugins.routing(alert)
+    wanted_plugins, wanted_config = plugins.routing()
 
     delete = True
     for plugin in wanted_plugins:
@@ -207,3 +209,131 @@ def process_delete(alert: Alert) -> bool:
                 logging.error(f"Error while running delete plugin '{plugin.name}': {str(e)}")
 
     return delete and alert.delete()
+
+def process_blackout(blackout: Blackout) -> Blackout:
+
+    wanted_plugins, wanted_config = plugins.routing()
+
+    for plugin in wanted_plugins:
+        try:
+            blackout = plugin.create_blackout(blackout, config=wanted_config)
+        except NotImplemented:
+            pass # plugin does not support create_blackout() method
+        except (RejectException, AlertaException):
+            raise
+        except Exception as e:
+            if current_app.config['PLUGINS_RAISE_ON_ERROR']:
+                raise ApiError(f"Error while running create blackout plugin '{plugin.name}': {str(e)}")
+            else:
+                logging.error(f"Error while running create blackout plugin '{plugin.name}': {str(e)}")
+
+    try:
+        blackout = blackout.create()
+    except Exception as e:
+        raise ApiError(str(e), 500)
+
+    return blackout
+
+def process_blackout_update(blackout: Blackout, update: json) -> 'json':
+
+    wanted_plugins, wanted_config = plugins.routing()
+
+    for plugin in wanted_plugins:
+        try:
+            updated = plugin.update_blackout(blackout, update, config=wanted_config)
+        except NotImplemented:
+            pass # plugin does not support update_blackout() method
+        except (RejectException, AlertaException):
+            raise
+        except Exception as e:
+            if current_app.config['PLUGINS_RAISE_ON_ERROR']:
+                raise ApiError(f"Error while running update blackout plugin '{plugin.name}': {str(e)}")
+            else:
+                logging.error(f"Error while running update blackout plugin '{plugin.name}': {str(e)}")
+    
+    try:
+        updated = blackout.update(**updated)
+    except Exception as e:
+        raise ApiError(str(e), 500)
+
+    return updated
+
+def process_blackout_delete(blackout: Blackout) -> bool:
+
+    wanted_plugins, wanted_config = plugins.routing()
+
+    delete = True
+    for plugin in wanted_plugins:
+        try:
+            delete = delete and plugin.delete_blackout(blackout, config=wanted_config)
+        except NotImplementedError:
+            pass  # plugin does not support delete_blackout() method
+        except (RejectException, AlertaException):
+            raise
+        except Exception as e:
+            if current_app.config['PLUGINS_RAISE_ON_ERROR']:
+                raise ApiError(f"Error while running delete blackout plugin '{plugin.name}': {str(e)}")
+            else:
+                logging.error(f"Error while running delete blackout plugin '{plugin.name}': {str(e)}")
+
+    return delete and blackout.delete()
+
+def process_filter(filter: Filter) -> Filter:
+
+    wanted_plugins, wanted_config = plugins.routing()
+
+    for plugin in wanted_plugins:
+        try:
+            plugin.create_filter(filter, config=wanted_config)
+        except NotImplemented:
+            pass # plugin does not support create_filter() method
+        except (RejectException):
+            raise
+        except Exception as e:
+            if current_app.config['PLUGINS_RAISE_ON_ERROR']:
+                raise ApiError(f"Error while running create filter plugin '{plugin.name}': {str(e)}")
+            else:
+                logging.error(f"Error while running create filter plugin '{plugin.name}': {str(e)}")  
+    return filter
+
+def process_filter_update(filter: Filter, update: json) -> 'json':
+
+    wanted_plugins, wanted_config = plugins.routing()
+
+    for plugin in wanted_plugins:
+        try:
+            updated = plugin.update_filter(filter, update, config=wanted_config)
+        except NotImplemented:
+            pass # plugin does not support update_blackout() method
+        except (RejectException, AlertaException):
+            raise
+        except Exception as e:
+            if current_app.config['PLUGINS_RAISE_ON_ERROR']:
+                raise ApiError(f"Error while running update blackout plugin '{plugin.name}': {str(e)}")
+            else:
+                logging.error(f"Error while running update blackout plugin '{plugin.name}': {str(e)}")
+    
+    try:
+        updated = filter.update(**updated)
+    except Exception as e:
+        raise ApiError(str(e), 500)
+
+    return updated
+
+def process_filter_delete(filter: Filter) -> bool:
+
+    wanted_plugins, wanted_config = plugins.routing()
+
+    delete = True
+    for plugin in wanted_plugins:
+        try:
+            delete = delete and plugin.delete(alert, config=wanted_config)
+        except NotImplementedError:
+            pass  # plugin does not support delete_filter() method
+        except (RejectException, AlertaException):
+            raise
+        except Exception as e:
+            if current_app.config['PLUGINS_RAISE_ON_ERROR']:
+                raise ApiError(f"Error while running delete filter plugin '{plugin.name}': {str(e)}")
+            else:
+                logging.error(f"Error while running delete filter plugin '{plugin.name}': {str(e)}")
