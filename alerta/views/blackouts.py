@@ -162,7 +162,7 @@ def delete_blackout(blackout_id):
     write_audit_trail.send(current_app._get_current_object(), event='blackout-deleted', message='', user=g.login,
                            customers=g.customers, scopes=g.scopes, resource_id=blackout.id, type='blackout', request=request)
 
-    if blackout.delete():
+    if blackout:
         return jsonify(status='ok')
     else:
         raise ApiError('failed to delete blackout', 500)
