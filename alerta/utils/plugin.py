@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-from typing import TYPE_CHECKINGdelete
+from typing import TYPE_CHECKING
 
 from flask import Config, Flask
 from pkg_resources import (DistributionNotFound, iter_entry_points,
