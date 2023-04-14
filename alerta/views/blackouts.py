@@ -6,7 +6,7 @@ from alerta.auth.decorators import permission
 from alerta.exceptions import ApiError
 from alerta.models.blackout import Blackout
 from alerta.models.enums import Scope
-from alerta.utils.api import assign_customer
+from alerta.utils.api import assign_customer, process_blackout, process_blackout_update, process_blackout_delete
 from alerta.utils.audit import write_audit_trail
 from alerta.utils.paging import Page
 from alerta.utils.response import absolute_url, jsonp
@@ -32,7 +32,12 @@ def create_blackout():
     blackout.customer = assign_customer(wanted=blackout.customer, permission=Scope.admin_blackouts)
 
     try:
-        blackout = blackout.create()
+        blackout = process_blackout(blackout)
+    except RejectException as e:
+        write_audit_trail.send(current_app._get_current_object(), event='blackout-rejected', message='', request=request)
+        raise ApiError(str(e), 403)
+    except AlertaException as e:
+        raise ApiError(e.message, code=e.code, errors=e.errors)
     except Exception as e:
         raise ApiError(str(e), 500)
 
@@ -113,11 +118,20 @@ def update_blackout(blackout_id):
     update['user'] = g.login
     update['customer'] = assign_customer(wanted=update.get('customer'), permission=Scope.admin_blackouts)
 
+    try:
+        updated = process_blackout_update(blackout, update)
+    except RejectException as e:
+        write_audit_trail.send(current_app._get_current_object(), event='blackout-update-rejected', message='', request=request)
+        raise ApiError(str(e), 403)
+    except AlertaException as e:
+        raise ApiError(e.message, code=e.code, errors=e.errors)
+    except Exception as e:
+        raise ApiError(str(e), 500)
+
     write_audit_trail.send(current_app._get_current_object(), event='blackout-updated', message='', user=g.login,
                            customers=g.customers, scopes=g.scopes, resource_id=blackout.id, type='blackout',
                            request=request)
 
-    updated = blackout.update(**update)
     if updated:
         return jsonify(status='ok', blackout=updated.serialize)
     else:
@@ -135,10 +149,20 @@ def delete_blackout(blackout_id):
     if not blackout:
         raise ApiError('not found', 404)
 
+    try:
+        blackout = process_blackout_delete(blackout)
+    except RejectException as e:
+        write_audit_trail.send(current_app._get_current_object(), event='blackout-delete-rejected', message='', request=request)
+        raise ApiError(str(e), 403)
+    except AlertaException as e:
+        raise ApiError(e.message, code=e.code, errors=e.errors)
+    except Exception as e:
+        raise ApiError(str(e), 500)
+
     write_audit_trail.send(current_app._get_current_object(), event='blackout-deleted', message='', user=g.login,
                            customers=g.customers, scopes=g.scopes, resource_id=blackout.id, type='blackout', request=request)
 
-    if blackout.delete():
+    if blackout:
         return jsonify(status='ok')
     else:
         raise ApiError('failed to delete blackout', 500)

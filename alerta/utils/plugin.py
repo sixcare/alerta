@@ -12,6 +12,7 @@ LOG = logging.getLogger('alerta.plugins')
 
 if TYPE_CHECKING:
     from typing import Iterable, Tuple  # noqa
+
     from alerta.models.alert import Alert  # noqa
     from alerta.plugins import PluginBase  # noqa
 
@@ -49,13 +50,13 @@ class Plugins:
         except (DistributionNotFound, ImportError):
             LOG.info('No plugin routing rules found. All plugins will be evaluated.')
 
-    def routing(self, alert: 'Alert') -> 'Tuple[Iterable[PluginBase], Config]':
+    def routing(self) -> 'Tuple[Iterable[PluginBase], Config]':
         try:
             if self.plugins and self.rules:
                 try:
-                    r = self.rules(alert, self.plugins, config=self.config)
+                    r = self.rules(self.plugins, config=self.config)
                 except TypeError:
-                    r = self.rules(alert, self.plugins)
+                    r = self.rules(self.plugins)
 
                 if isinstance(r, list):
                     return r, self.config

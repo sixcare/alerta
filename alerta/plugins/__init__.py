@@ -4,7 +4,7 @@ import os
 from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
-    from alerta.models.alert import Alert  # noqa
+    from alerta.models.alert import Alert, Blackout, Filter  # noqa
 
 LOG = logging.getLogger('alerta.plugins')
 
@@ -44,6 +44,30 @@ class PluginBase(metaclass=abc.ABCMeta):
 
     def delete(self, alert: 'Alert', **kwargs) -> bool:
         """Trigger integrations when an alert is deleted. (optional)"""
+        raise NotImplementedError
+
+    def create_blackout(self, blackout: 'Blackout', **kwargs) -> 'Blackout':
+        """Trigger integrations when an blackout is created. (optional)"""
+        raise NotImplementedError
+
+    def update_blackout(self, blackout: 'Blackout', update: 'json', **kwargs) -> Any:
+        """Trigger integrations when an blackout is created. (optional)"""
+        raise NotImplementedError
+
+    def delete_blackout(self, blackout: 'Blackout', **kwargs) -> bool:
+        """Trigger integrations when an blackout is deleted. (optional)"""
+        raise NotImplementedError
+
+    def create_filter(self, filter: 'Filter', **kwargs) -> 'Filter':
+        """Trigger integrations when an filter is created. (optional)"""
+        raise NotImplementedError
+
+    def update_filter(self, filter: 'Filter', update: 'json', **kwargs) -> Any:
+        """Trigger integrations when an filter is created. (optional)"""
+        raise NotImplementedError
+
+    def delete_filter(self, filter: 'Filter', **kwargs) -> bool:
+        """Trigger integrations when an filter is deleted. (optional)"""
         raise NotImplementedError
 
     @staticmethod

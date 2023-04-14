@@ -6,7 +6,7 @@ from alerta.auth.decorators import permission
 from alerta.exceptions import ApiError
 from alerta.models.enums import Scope
 from alerta.models.filter import Filter
-from alerta.utils.api import assign_customer
+from alerta.utils.api import assign_customer, process_filter, process_filter_update, process_filter_delete
 from alerta.utils.audit import write_audit_trail
 from alerta.utils.paging import Page
 from alerta.utils.response import absolute_url, jsonp
@@ -32,7 +32,12 @@ def create_filter():
     filter.customer = assign_customer(wanted=filter.customer, permission=Scope.admin_filters)
 
     try:
-        filter = filter.create()
+        filter = process_filter(filter)
+    except RejectException as e:
+        write_audit_trail.send(current_app._get_current_object(), event='filter-rejected', message='', request=request)
+        raise ApiError(str(e), 403)
+    except AlertaException as e:
+        raise ApiError(e.message, code=e.code, errors=e.errors)
     except Exception as e:
         raise ApiError(str(e), 500)
 
@@ -141,11 +146,20 @@ def update_filter(filter_id):
     update['user'] = g.login
     update['customer'] = assign_customer(wanted=update.get('customer'), permission=Scope.admin_filters)
 
+    try:
+        updated = process_filter_update(filter, update)
+    except RejectException as e:
+        write_audit_trail.send(current_app._get_current_object(), event='filter-update-rejected', message='', request=request)
+        raise ApiError(str(e), 403)
+    except AlertaException as e:
+        raise ApiError(e.message, code=e.code, errors=e.errors)
+    except Exception as e:
+        raise ApiError(str(e), 500)
+
     write_audit_trail.send(current_app._get_current_object(), event='filter-updated', message='', user=g.login,
                            customers=g.customers, scopes=g.scopes, resource_id=filter.id, type='filter',
                            request=request)
 
-    updated = filter.update(**update)
     if updated:
         return jsonify(status='ok', filter=updated.serialize)
     else:
@@ -163,10 +177,20 @@ def delete_filter(filter_id):
     if not filter:
         raise ApiError('not found', 404)
 
+    try:
+        filter = process_filter_delete(filter)
+    except RejectException as e:
+        write_audit_trail.send(current_app._get_current_object(), event='filter-delete-rejected', message='', request=request)
+        raise ApiError(str(e), 403)
+    except AlertaException as e:
+        raise ApiError(e.message, code=e.code, errors=e.errors)
+    except Exception as e:
+        raise ApiError(str(e), 500)
+
     write_audit_trail.send(current_app._get_current_object(), event='filter-deleted', message='', user=g.login,
                            customers=g.customers, scopes=g.scopes, resource_id=filter.id, type='filter', request=request)
 
-    if filter.delete():
+    if filter:
         return jsonify(status='ok')
     else:
         raise ApiError('failed to delete filter', 500)
