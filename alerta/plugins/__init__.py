@@ -46,24 +46,16 @@ class PluginBase(metaclass=abc.ABCMeta):
         """Trigger integrations when an alert is deleted. (optional)"""
         raise NotImplementedError
 
-    def create_blackout(self, blackout: 'Blackout', **kwargs) -> 'Blackout':
-        """Trigger integrations when an blackout is created. (optional)"""
-        raise NotImplementedError
-
-    def update_blackout(self, blackout: 'Blackout', update: 'json', **kwargs) -> Any:
-        """Trigger integrations when an blackout is created. (optional)"""
+    def receive_blackout(self, blackout: 'Blackout', **kwargs) -> 'Blackout':
+        """Trigger integrations when a blackout is created. (optional)"""
         raise NotImplementedError
 
     def delete_blackout(self, blackout: 'Blackout', **kwargs) -> bool:
-        """Trigger integrations when an blackout is deleted. (optional)"""
+        """Trigger integrations when a blackout is deleted. (optional)"""
         raise NotImplementedError
 
-    def create_filter(self, filter: 'Filter', **kwargs) -> 'Filter':
-        """Trigger integrations when an filter is created. (optional)"""
-        raise NotImplementedError
-
-    def update_filter(self, filter: 'Filter', update: 'json', **kwargs) -> Any:
-        """Trigger integrations when an filter is created. (optional)"""
+    def receive_filter(self, filter: 'Filter', **kwargs) -> 'Filter':
+        """Trigger integrations when a filter is created. (optional)"""
         raise NotImplementedError
 
     def delete_filter(self, filter: 'Filter', **kwargs) -> bool:

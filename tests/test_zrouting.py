@@ -108,9 +108,9 @@ class RoutingTestCase(unittest.TestCase):
         }
 
         # create dummy plugins
-        plugins.plugins['pagerduty'] = DummyPagerDutyPlugin()
-        plugins.plugins['slack'] = DummySlackPlugin()
-        plugins.plugins['config'] = DummyConfigPlugin()
+        plugins.plugins['pagerduty'] = DummyPagerDutyPlugin(name='pagerduty')
+        plugins.plugins['slack'] = DummySlackPlugin(name='slack')
+        plugins.plugins['config'] = DummyConfigPlugin(name='config')
 
     def tearDown(self):
         plugins.plugins.clear()

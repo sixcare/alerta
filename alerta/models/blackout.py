@@ -112,7 +112,7 @@ class Blackout:
             user=json.get('user', None),
             text=json.get('text', None)
         )
-
+        
     @property
     def serialize(self) -> Dict[str, Any]:
         return {
@@ -220,6 +220,9 @@ class Blackout:
     def create(self) -> 'Blackout':
         return Blackout.from_db(db.create_blackout(self))
 
+    def save(self) -> 'Blackout':
+        return Blackout.from_db(db.update_blackout(**{**vars(self), "startTime": self.start_time, "endTime": self.end_time }))
+
     # get a blackout
     @staticmethod
     def find_by_id(id: str, customers: List[str] = None) -> Optional['Blackout']:
@@ -242,3 +245,12 @@ class Blackout:
 
     def delete(self) -> bool:
         return db.delete_blackout(self.id)
+
+    def parse_update(self, json: JSON) -> 'Blackout':
+
+        if json.get('startTime'):
+            json['start_time'] = DateTime.parse(json['startTime'])
+        if json.get('endTime'):
+            json['end_time'] = DateTime.parse(json['endTime'])
+
+        return Blackout(**{**vars(self), **json})

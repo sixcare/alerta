@@ -218,9 +218,9 @@ def process_blackout(blackout: Blackout) -> Blackout:
 
     for plugin in wanted_plugins:
         try:
-            blackout = plugin.create_blackout(blackout, config=wanted_config)
-        except NotImplemented:
-            pass # plugin does not support create_blackout() method
+            blackout = plugin.receive_blackout(blackout, config=wanted_config)
+        except NotImplementedError:
+            pass  # plugin does not support create_blackout() method
         except (RejectException, AlertaException):
             raise
         except Exception as e:
@@ -230,35 +230,16 @@ def process_blackout(blackout: Blackout) -> Blackout:
                 logging.error(f"Error while running create blackout plugin '{plugin.name}': {str(e)}")
 
     try:
-        blackout = blackout.create()
+        # Check if blackout exist
+        if Blackout.find_by_id(blackout.id):
+            blackout = blackout.save()
+        else:
+            blackout = blackout.create()
     except Exception as e:
         raise ApiError(str(e), 500)
 
     return blackout
 
-def process_blackout_update(blackout: Blackout, update: json) -> 'json':
-
-    wanted_plugins, wanted_config = plugins.routing()
-
-    for plugin in wanted_plugins:
-        try:
-            updated = plugin.update_blackout(blackout, update, config=wanted_config)
-        except NotImplemented:
-            pass # plugin does not support update_blackout() method
-        except (RejectException, AlertaException):
-            raise
-        except Exception as e:
-            if current_app.config['PLUGINS_RAISE_ON_ERROR']:
-                raise ApiError(f"Error while running update blackout plugin '{plugin.name}': {str(e)}")
-            else:
-                logging.error(f"Error while running update blackout plugin '{plugin.name}': {str(e)}")
-    
-    try:
-        updated = blackout.update(**updated)
-    except Exception as e:
-        raise ApiError(str(e), 500)
-
-    return updated
 
 def process_blackout_delete(blackout: Blackout) -> bool:
 
@@ -280,47 +261,35 @@ def process_blackout_delete(blackout: Blackout) -> bool:
 
     return delete and blackout.delete()
 
+
 def process_filter(filter: Filter) -> Filter:
 
     wanted_plugins, wanted_config = plugins.routing()
 
     for plugin in wanted_plugins:
         try:
-            plugin.create_filter(filter, config=wanted_config)
-        except NotImplemented:
-            pass # plugin does not support create_filter() method
-        except (RejectException):
+            filter = plugin.receive_filter(filter, config=wanted_config)
+        except NotImplementedError:
+            pass  # plugin does not support create_filter() method
+        except (RejectException, AlertaException):
             raise
         except Exception as e:
             if current_app.config['PLUGINS_RAISE_ON_ERROR']:
                 raise ApiError(f"Error while running create filter plugin '{plugin.name}': {str(e)}")
             else:
-                logging.error(f"Error while running create filter plugin '{plugin.name}': {str(e)}")  
-    return filter
+                logging.error(f"Error while running create filter plugin '{plugin.name}': {str(e)}")
 
-def process_filter_update(filter: Filter, update: json) -> 'json':
-
-    wanted_plugins, wanted_config = plugins.routing()
-
-    for plugin in wanted_plugins:
-        try:
-            updated = plugin.update_filter(filter, update, config=wanted_config)
-        except NotImplemented:
-            pass # plugin does not support update_blackout() method
-        except (RejectException, AlertaException):
-            raise
-        except Exception as e:
-            if current_app.config['PLUGINS_RAISE_ON_ERROR']:
-                raise ApiError(f"Error while running update blackout plugin '{plugin.name}': {str(e)}")
-            else:
-                logging.error(f"Error while running update blackout plugin '{plugin.name}': {str(e)}")
-    
     try:
-        updated = filter.update(**updated)
+    # Check if filter exist
+        if Filter.find_by_id(filter.id):
+            filter = filter.save()
+        else:
+            filter = filter.create()
     except Exception as e:
         raise ApiError(str(e), 500)
 
-    return updated
+    return filter
+
 
 def process_filter_delete(filter: Filter) -> bool:
 
@@ -339,3 +308,5 @@ def process_filter_delete(filter: Filter) -> bool:
                 raise ApiError(f"Error while running delete filter plugin '{plugin.name}': {str(e)}")
             else:
                 logging.error(f"Error while running delete filter plugin '{plugin.name}': {str(e)}")
+
+    return delete and filter.delete()

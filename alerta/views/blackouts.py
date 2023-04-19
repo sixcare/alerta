@@ -3,12 +3,13 @@ from flask_cors import cross_origin
 
 from alerta.app import qb
 from alerta.auth.decorators import permission
-from alerta.exceptions import ApiError
+from alerta.exceptions import ApiError, RejectException, AlertaException
 from alerta.models.blackout import Blackout
 from alerta.models.enums import Scope
-from alerta.utils.api import assign_customer, process_blackout, process_blackout_update, process_blackout_delete
+from alerta.utils.api import assign_customer, process_blackout, process_blackout_delete
 from alerta.utils.audit import write_audit_trail
 from alerta.utils.paging import Page
+from alerta.utils.format import DateTime
 from alerta.utils.response import absolute_url, jsonp
 
 from . import api
@@ -44,10 +45,7 @@ def create_blackout():
     write_audit_trail.send(current_app._get_current_object(), event='blackout-created', message='', user=g.login,
                            customers=g.customers, scopes=g.scopes, resource_id=blackout.id, type='blackout', request=request)
 
-    if blackout:
-        return jsonify(status='ok', id=blackout.id, blackout=blackout.serialize), 201, {'Location': absolute_url('/blackout/' + blackout.id)}
-    else:
-        raise ApiError('insert blackout failed', 500)
+    return jsonify(status='ok', id=blackout.id, blackout=blackout.serialize), 201, {'Location': absolute_url('/blackout/' + blackout.id)}
 
 
 @api.route('/blackout/<blackout_id>', methods=['OPTIONS', 'GET'])
@@ -118,10 +116,12 @@ def update_blackout(blackout_id):
     update['user'] = g.login
     update['customer'] = assign_customer(wanted=update.get('customer'), permission=Scope.admin_blackouts)
 
+    updated = blackout.parse_update(update)
+
     try:
-        updated = process_blackout_update(blackout, update)
+        updated = process_blackout(updated)
     except RejectException as e:
-        write_audit_trail.send(current_app._get_current_object(), event='blackout-update-rejected', message='', request=request)
+        write_audit_trail.send(current_app._get_current_object(), event='blackout-rejected', message='', request=request)
         raise ApiError(str(e), 403)
     except AlertaException as e:
         raise ApiError(e.message, code=e.code, errors=e.errors)
@@ -132,11 +132,8 @@ def update_blackout(blackout_id):
                            customers=g.customers, scopes=g.scopes, resource_id=blackout.id, type='blackout',
                            request=request)
 
-    if updated:
-        return jsonify(status='ok', blackout=updated.serialize)
-    else:
-        raise ApiError('failed to update blackout', 500)
-
+    return jsonify(status='ok', blackout=updated.serialize)
+    
 
 @api.route('/blackout/<blackout_id>', methods=['OPTIONS', 'DELETE'])
 @cross_origin()

@@ -191,6 +191,9 @@ class Filter:
     def create(self) -> 'Filter':
         return Filter.from_db(db.create_filter(self))
 
+    def save(self) -> 'Filter':
+        return Filter.from_db(db.update_filter(**vars(self)))
+
     # get a filter
     @staticmethod
     def find_by_id(id: str, customers: List[str] = None) -> Optional['Filter']:
@@ -219,3 +222,6 @@ class Filter:
 
     def delete(self) -> bool:
         return db.delete_filter(self.id)
+
+    def parse_update(self, json: JSON) -> 'Filter':
+        return Filter(**{**vars(self), **json})

@@ -3,10 +3,10 @@ from flask_cors import cross_origin
 
 from alerta.app import qb
 from alerta.auth.decorators import permission
-from alerta.exceptions import ApiError
+from alerta.exceptions import ApiError, RejectException, AlertaException
 from alerta.models.enums import Scope
 from alerta.models.filter import Filter
-from alerta.utils.api import assign_customer, process_filter, process_filter_update, process_filter_delete
+from alerta.utils.api import assign_customer, process_filter, process_filter_delete
 from alerta.utils.audit import write_audit_trail
 from alerta.utils.paging import Page
 from alerta.utils.response import absolute_url, jsonp
@@ -44,10 +44,7 @@ def create_filter():
     write_audit_trail.send(current_app._get_current_object(), event='filter-created', message='', user=g.login,
                            customers=g.customers, scopes=g.scopes, resource_id=filter.id, type='filter', request=request)
 
-    if filter:
-        return jsonify(status='ok', id=filter.id, filter=filter.serialize), 201, {'Location': absolute_url('/filter/' + filter.id)}
-    else:
-        raise ApiError('insert filter failed', 500)
+    return jsonify(status='ok', id=filter.id, filter=filter.serialize), 201, {'Location': absolute_url('/filter/' + filter.id)}
 
 
 @api.route('/filter/<filter_id>', methods=['OPTIONS', 'GET'])
@@ -146,8 +143,10 @@ def update_filter(filter_id):
     update['user'] = g.login
     update['customer'] = assign_customer(wanted=update.get('customer'), permission=Scope.admin_filters)
 
+    updated = filter.parse_update(update)
+
     try:
-        updated = process_filter_update(filter, update)
+        updated = process_filter(updated)
     except RejectException as e:
         write_audit_trail.send(current_app._get_current_object(), event='filter-update-rejected', message='', request=request)
         raise ApiError(str(e), 403)
@@ -160,10 +159,7 @@ def update_filter(filter_id):
                            customers=g.customers, scopes=g.scopes, resource_id=filter.id, type='filter',
                            request=request)
 
-    if updated:
-        return jsonify(status='ok', filter=updated.serialize)
-    else:
-        raise ApiError('failed to update filter', 500)
+    return jsonify(status='ok', filter=updated.serialize)
 
 
 @api.route('/filter/<filter_id>', methods=['OPTIONS', 'DELETE'])
