@@ -1,5 +1,4 @@
 import logging
-import json
 from typing import Optional, Tuple
 
 from flask import current_app, g
@@ -10,8 +9,8 @@ from alerta.exceptions import (AlertaException, ApiError, BlackoutPeriod,
                                InvalidAction, RateLimit, RejectException)
 from alerta.models.alert import Alert
 from alerta.models.blackout import Blackout
-from alerta.models.filter import Filter
 from alerta.models.enums import Scope
+from alerta.models.filter import Filter
 
 
 def assign_customer(wanted: str = None, permission: str = Scope.admin_alerts) -> Optional[str]:
@@ -212,6 +211,7 @@ def process_delete(alert: Alert) -> bool:
 
     return delete and alert.delete()
 
+
 def process_blackout(blackout: Blackout) -> Blackout:
 
     for plugin in plugins.plugins.values():
@@ -274,7 +274,7 @@ def process_filter(filter: Filter) -> Filter:
                 logging.error(f"Error while running create filter plugin '{plugin.name}': {str(e)}")
 
     try:
-    # Check if filter exist
+        # Check if filter exist
         if Filter.find_by_id(filter.id):
             filter = filter.save()
         else:
@@ -290,7 +290,7 @@ def process_filter_delete(filter: Filter) -> bool:
     delete = True
     for plugin in plugins.plugins.values():
         try:
-            delete = delete and plugin.delete(alert)
+            delete = delete and plugin.delete(filter)
         except NotImplementedError:
             pass  # plugin does not support delete_filter() method
         except (RejectException, AlertaException):

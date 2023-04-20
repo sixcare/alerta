@@ -3,10 +3,11 @@ from flask_cors import cross_origin
 
 from alerta.app import qb
 from alerta.auth.decorators import permission
-from alerta.exceptions import ApiError, RejectException, AlertaException
+from alerta.exceptions import AlertaException, ApiError, RejectException
 from alerta.models.enums import Scope
 from alerta.models.filter import Filter
-from alerta.utils.api import assign_customer, process_filter, process_filter_delete
+from alerta.utils.api import (assign_customer, process_filter,
+                              process_filter_delete)
 from alerta.utils.audit import write_audit_trail
 from alerta.utils.paging import Page
 from alerta.utils.response import absolute_url, jsonp

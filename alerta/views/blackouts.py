@@ -3,13 +3,13 @@ from flask_cors import cross_origin
 
 from alerta.app import qb
 from alerta.auth.decorators import permission
-from alerta.exceptions import ApiError, RejectException, AlertaException
+from alerta.exceptions import AlertaException, ApiError, RejectException
 from alerta.models.blackout import Blackout
 from alerta.models.enums import Scope
-from alerta.utils.api import assign_customer, process_blackout, process_blackout_delete
+from alerta.utils.api import (assign_customer, process_blackout,
+                              process_blackout_delete)
 from alerta.utils.audit import write_audit_trail
 from alerta.utils.paging import Page
-from alerta.utils.format import DateTime
 from alerta.utils.response import absolute_url, jsonp
 
 from . import api
@@ -133,7 +133,7 @@ def update_blackout(blackout_id):
                            request=request)
 
     return jsonify(status='ok', blackout=updated.serialize)
-    
+
 
 @api.route('/blackout/<blackout_id>', methods=['OPTIONS', 'DELETE'])
 @cross_origin()
