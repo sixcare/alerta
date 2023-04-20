@@ -33,7 +33,7 @@ def assign_customer(wanted: str = None, permission: str = Scope.admin_alerts) ->
 
 def process_alert(alert: Alert) -> Alert:
 
-    wanted_plugins, wanted_config = plugins.routing()
+    wanted_plugins, wanted_config = plugins.routing(alert)
 
     skip_plugins = False
     for plugin in wanted_plugins:
@@ -67,7 +67,7 @@ def process_alert(alert: Alert) -> Alert:
     except Exception as e:
         raise ApiError(str(e))
 
-    wanted_plugins, wanted_config = plugins.routing()
+    wanted_plugins, wanted_config = plugins.routing(alert)
 
     alert_was_updated: bool = False
     for plugin in wanted_plugins:
@@ -97,7 +97,7 @@ def process_alert(alert: Alert) -> Alert:
 
 def process_action(alert: Alert, action: str, text: str, timeout: int = None) -> Tuple[Alert, str, str, Optional[int]]:
 
-    wanted_plugins, wanted_config = plugins.routing()
+    wanted_plugins, wanted_config = plugins.routing(alert)
 
     updated = None
     for plugin in wanted_plugins:
@@ -132,7 +132,7 @@ def process_action(alert: Alert, action: str, text: str, timeout: int = None) ->
 
 def process_note(alert: Alert, text: str) -> Tuple[Alert, str]:
 
-    wanted_plugins, wanted_config = plugins.routing()
+    wanted_plugins, wanted_config = plugins.routing(alert)
 
     updated = None
     for plugin in wanted_plugins:
@@ -162,7 +162,7 @@ def process_note(alert: Alert, text: str) -> Tuple[Alert, str]:
 
 def process_status(alert: Alert, status: str, text: str) -> Tuple[Alert, str, str]:
 
-    wanted_plugins, wanted_config = plugins.routing()
+    wanted_plugins, wanted_config = plugins.routing(alert)
 
     updated = None
     for plugin in wanted_plugins:
@@ -194,7 +194,7 @@ def process_status(alert: Alert, status: str, text: str) -> Tuple[Alert, str, st
 
 def process_delete(alert: Alert) -> bool:
 
-    wanted_plugins, wanted_config = plugins.routing()
+    wanted_plugins, wanted_config = plugins.routing(alert)
 
     delete = True
     for plugin in wanted_plugins:
@@ -214,11 +214,9 @@ def process_delete(alert: Alert) -> bool:
 
 def process_blackout(blackout: Blackout) -> Blackout:
 
-    wanted_plugins, wanted_config = plugins.routing()
-
-    for plugin in wanted_plugins:
+    for plugin in plugins.plugins.values():
         try:
-            blackout = plugin.receive_blackout(blackout, config=wanted_config)
+            blackout = plugin.receive_blackout(blackout)
         except NotImplementedError:
             pass  # plugin does not support create_blackout() method
         except (RejectException, AlertaException):
@@ -243,12 +241,10 @@ def process_blackout(blackout: Blackout) -> Blackout:
 
 def process_blackout_delete(blackout: Blackout) -> bool:
 
-    wanted_plugins, wanted_config = plugins.routing()
-
     delete = True
-    for plugin in wanted_plugins:
+    for plugin in plugins.plugins.values():
         try:
-            delete = delete and plugin.delete_blackout(blackout, config=wanted_config)
+            delete = delete and plugin.delete_blackout(blackout)
         except NotImplementedError:
             pass  # plugin does not support delete_blackout() method
         except (RejectException, AlertaException):
@@ -264,11 +260,9 @@ def process_blackout_delete(blackout: Blackout) -> bool:
 
 def process_filter(filter: Filter) -> Filter:
 
-    wanted_plugins, wanted_config = plugins.routing()
-
-    for plugin in wanted_plugins:
+    for plugin in plugins.plugins.values():
         try:
-            filter = plugin.receive_filter(filter, config=wanted_config)
+            filter = plugin.receive_filter(filter)
         except NotImplementedError:
             pass  # plugin does not support create_filter() method
         except (RejectException, AlertaException):
@@ -293,12 +287,10 @@ def process_filter(filter: Filter) -> Filter:
 
 def process_filter_delete(filter: Filter) -> bool:
 
-    wanted_plugins, wanted_config = plugins.routing()
-
     delete = True
-    for plugin in wanted_plugins:
+    for plugin in plugins.plugins.values():
         try:
-            delete = delete and plugin.delete(alert, config=wanted_config)
+            delete = delete and plugin.delete(alert)
         except NotImplementedError:
             pass  # plugin does not support delete_filter() method
         except (RejectException, AlertaException):
